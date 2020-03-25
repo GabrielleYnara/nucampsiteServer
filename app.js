@@ -30,10 +30,38 @@ var app = express();
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'jade');
 
+// The middleware functions are applied in the order they appear 
 app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
+
+// Defining authentication middleware
+function auth(req, res, next){
+    console.log(req.headers);
+    const authHeader = req.headers.authorization;
+    if (!authHeader) { // If null, it means there's no authentication information in this request
+        const err = new Error('You\'re not authenticated');
+        res.setHeader('WWW-Authenticate', 'Basic'); // Server is requesting authentication to the client through a basic method
+        err.status = 401; // Unauthorized
+        return next(err);
+    }
+
+    // Takes the authorization header, extracts the username and password and put them in the auth array
+    const auth = Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':');
+    const user = auth[0];
+    const pass = auth[1];
+    if (user === 'admin' && pass === 'password') {
+        return next(); // access granted/authorized
+    } else {
+        const err = new Error('You\'re not authenticated!');
+        res.setHeader('WWW-Authenticate', 'Basic');
+        err.status = 401; // Unauthorized
+        return next(err);
+    }
+}
+app.use(auth); // using middleware
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', indexRouter);
