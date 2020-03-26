@@ -34,33 +34,48 @@ app.set('view engine', 'jade');
 app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-app.use(cookieParser());
+app.use(cookieParser('12345-67890-09876-54321')); // signed cookie
 
 // Defining authentication middleware
-function auth(req, res, next){
-    console.log(req.headers);
-    const authHeader = req.headers.authorization;
-    if (!authHeader) { // If null, it means there's no authentication information in this request
-        const err = new Error('You\'re not authenticated');
-        res.setHeader('WWW-Authenticate', 'Basic'); // Server is requesting authentication to the client through a basic method
-        err.status = 401; // Unauthorized
-        return next(err);
-    }
+function auth(req, res, next){ 
+    if (!req.signedCookies.user) {// if the request doesn't have a signed cookie
+        const authHeader = req.headers.authorization;   
+        if (!authHeader) { // If null, it means there's no authentication information in this request
+            const err = new Error('You\'re not authenticated');
+            res.setHeader('WWW-Authenticate', 'Basic'); // Server is requesting authentication to the client through a basic method
+            err.status = 401; // Unauthorized
+            return next(err);
+        }
 
-    // Takes the authorization header, extracts the username and password and put them in the auth array
-    const auth = Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':');
-    const user = auth[0];
-    const pass = auth[1];
-    if (user === 'admin' && pass === 'password') {
-        return next(); // access granted/authorized
-    } else {
-        const err = new Error('You\'re not authenticated!');
-        res.setHeader('WWW-Authenticate', 'Basic');
-        err.status = 401; // Unauthorized
-        return next(err);
+        // Takes the authorization header, extracts the username and password and put them in the auth array
+        const auth = Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':');
+        const user = auth[0];
+        const pass = auth[1];
+        if (user === 'admin' && pass === 'password') {
+            /**
+             * Setting up a cookie. 1st argument name property, followed by the value, 
+             * 3rd argument is optional to create a signed cookie
+             */
+            res.cookie('user', 'admin', {signed: true}); 
+            return next(); // access granted/authorized
+        } else {
+            const err = new Error('You\'re not authenticated!');
+            res.setHeader('WWW-Authenticate', 'Basic');
+            err.status = 401; // Unauthorized
+            return next(err);
+        }
+    } else { // if there is a signed cookie in the request
+        if (req.signedCookies.user === 'admin') {
+            return next();
+        } else {
+            const err = new Error('You\'re not authenticated!');
+            err.status = 401; // Unauthorized
+            return next(err);
+        }
     }
 }
-app.use(auth); // using middleware
+
+app.use(auth); // using authentication middleware
 
 app.use(express.static(path.join(__dirname, 'public')));
 
