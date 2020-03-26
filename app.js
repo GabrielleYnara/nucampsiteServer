@@ -46,34 +46,19 @@ app.use(session({
     store: new FileStore() 
 }))
 
+app.use('/', indexRouter);
+app.use('/users', usersRouter);
+
 // Defining authentication middleware
 function auth(req, res, next){ 
     console.log(req.session);
 
     if (!req.session.user) {// if the request doesn't have a signed cookie
-        const authHeader = req.headers.authorization;   
-        if (!authHeader) { // If null, it means there's no authentication information in this request
             const err = new Error('You\'re not authenticated');
-            res.setHeader('WWW-Authenticate', 'Basic'); // Server is requesting authentication to the client through a basic method
             err.status = 401; // Unauthorized
             return next(err);
-        }
-
-        // Takes the authorization header, extracts the username and password and put them in the auth array
-        const auth = Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':');
-        const user = auth[0];
-        const pass = auth[1];
-        if (user === 'admin' && pass === 'password') {
-            req.session.user = 'admin';
-            return next(); // access granted/authorized
-        } else {
-            const err = new Error('You\'re not authenticated!');
-            res.setHeader('WWW-Authenticate', 'Basic');
-            err.status = 401; // Unauthorized
-            return next(err);
-        }
     } else { // if there is a signed cookie in the request
-        if (req.session.user === 'admin') {
+        if (req.session.user === 'authenticated') {
             return next();
         } else {
             const err = new Error('You\'re not authenticated!');
@@ -87,8 +72,6 @@ app.use(auth); // using authentication middleware
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.use('/', indexRouter);
-app.use('/users', usersRouter);
 app.use('/campsites', campsiteRouter);
 app.use('/partners', partnerRouter);
 app.use('/promotions', promotionRouter);
