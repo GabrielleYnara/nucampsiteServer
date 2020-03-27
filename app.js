@@ -4,7 +4,9 @@ var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 const session = require('express-session');
-const FileStore = require('session-file-store')(session); // 
+const FileStore = require('session-file-store')(session); 
+const passport = require('passport');
+const authenticate = require('./authenticate');
 
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
@@ -46,25 +48,22 @@ app.use(session({
     store: new FileStore() 
 }))
 
+app.use(passport.initialize());
+app.use(passport.session());
+
 app.use('/', indexRouter);
 app.use('/users', usersRouter);
 
 // Defining authentication middleware
 function auth(req, res, next){ 
-    console.log(req.session);
+    console.log(req.user);
 
-    if (!req.session.user) {// if the request doesn't have a signed cookie
-            const err = new Error('You\'re not authenticated');
-            err.status = 401; // Unauthorized
-            return next(err);
-    } else { // if there is a signed cookie in the request
-        if (req.session.user === 'authenticated') {
-            return next();
-        } else {
-            const err = new Error('You\'re not authenticated!');
-            err.status = 401; // Unauthorized
-            return next(err);
-        }
+    if (!req.user) {// if the request doesn't have a signed cookie
+        const err = new Error('You\'re not authenticated');
+        err.status = 401; // Unauthorized
+        return next(err);
+    } else { 
+        return next();  
     }
 }
 
