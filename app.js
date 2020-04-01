@@ -27,6 +27,15 @@ connect.then(() => console.log('Connected correctly to server'),
 
 var app = express();
 
+app.all('*', (req, res, next) => { // catches every single request on the server
+  if (req.secure) { // express automatically sets as true when the connection is being requested by HTTPS
+    return next();
+  } else {
+    console.log(`Redirecting to: https://${req.hostname}:${app.get('secPort')}${req.url}`);
+    res.redirect(301, `https://${req.hostname}:${app.get('secPort')}${req.url}`);
+  }
+}); 
+
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'jade');
