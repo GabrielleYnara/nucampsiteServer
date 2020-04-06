@@ -94,7 +94,7 @@ campsiteRouter.route('/:campsiteId/comments')
             res.json(campsite.comments);
         } else {
             err = new Error(`Campsite ${req.params.campsiteId} not found`);
-            err.status = 404;
+            err.status = 404; // Not Found
             return next(err);
         }
     })
